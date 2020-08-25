@@ -21,6 +21,10 @@ class RuntimeConfigWebpackPlugin {
       );
     });
 
+    compiler.hooks.afterCompile.tap(PLUGIN_NAME, (compilation) => {
+      compilation.fileDependencies.add(require.resolve(compiler.context + DEFAULT_CONFIG_PATH));
+    })
+
     compiler.hooks.emit.tapAsync(PLUGIN_NAME, (compilation, callback) => {
       delete require.cache[
         require.resolve(compiler.context + DEFAULT_CONFIG_PATH)
