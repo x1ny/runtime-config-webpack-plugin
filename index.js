@@ -30,9 +30,37 @@ class RuntimeConfigWebpackPlugin {
         require.resolve(compiler.context + DEFAULT_CONFIG_PATH)
       ];
       const config = require(compiler.context + DEFAULT_CONFIG_PATH);
+
+      let SHELL_SCRIPT = ""
+      Object.keys(config).forEach(key => {
+        SHELL_SCRIPT += `if [ "$${key}" == "" ];then\n`
+                      + `  ${key}="${typeof(config[key]) == 'string' ? `'${config[key]}'` : config[key]}"\n`
+                      + `elif [[ $${key} =~ ^-?([1-9][0-9]*)?[0-9]([.][0-9]+)?$ ]];then\n`
+                      + `  ${key}=$${key}\n`
+                      + `elif [ "$${key}" == "true" ] || [ "$${key}" == "false" ];then\n`
+                      + `  ${key}=$${key}\n`
+                      + `else\n`
+                      + `  ${key}="'$${key}'"\n`
+                      + `fi\n`
+      })
+      SHELL_SCRIPT += `echo "window['__RUNTIME_CONFIG__'] = {\n`
+                    + `${Object.keys(config).map(key => `  ${key}: $${key},\n`).join("")}`
+                    + `}" > ${DEFAULT_ASSET_NAME}\n`
+
+      compilation.assets['generate_config.sh'] = {
+        source: function () {
+          return SHELL_SCRIPT;
+        },
+        size: function () {
+          return SHELL_SCRIPT.length;
+        },
+      };
+
       const content = `window['${DEFAULT_EXTERNAL_VALUE}'] = ${JSON.stringify(
         config
       )}`;
+
+      
 
       compilation.assets[DEFAULT_ASSET_NAME] = {
         source: function () {
